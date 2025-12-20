@@ -8,6 +8,8 @@ import (
 	"github.com/dafanmahendra/evermos-backend/models"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/golang-jwt/jwt/v5"
+	"time"
 )
 
 // Register - Daftar user baru + Auto Create Toko
@@ -34,7 +36,7 @@ func Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// --- 🚨 START SUNTIKAN LOGIC TUGAS NO. 2 (AUTO TOKO) 🚨 ---
+	// --- LOGIC TUGAS NO. 2 (AUTO TOKO) ---
 
 	// Logic: Nama Toko = "Toko [Nama User]"
 	namaToko := fmt.Sprintf("Toko %s", input.Nama)
@@ -43,7 +45,7 @@ func Register(c *fiber.Ctx) error {
 	urlToko := fmt.Sprintf("evermos.com/toko-%s", slug)
 
 	toko := models.Toko{
-		IdUser:   input.ID, // Ambil ID user yang baru aja dibuat
+		UserID:   input.ID, // Ambil ID user yang baru aja dibuat
 		NamaToko: namaToko,
 		UrlToko:  urlToko,
 	}
@@ -67,42 +69,57 @@ func Register(c *fiber.Ctx) error {
 	})
 }
 
-// Login - Autentikasi user
+// Login - Autentikasi user dengan JWT
 func Login(c *fiber.Ctx) error {
-	var input struct {
-		Email     string `json:"email"`
-		KataSandi string `json:"kata_sandi"`
-	}
+    var input struct {
+        Email     string `json:"email"`
+        KataSandi string `json:"kata_sandi"`
+    }
 
-	// Parse body
-	if err := c.BodyParser(&input); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid input",
-		})
-	}
+    // 1. Tangkap Input JSON
+    if err := c.BodyParser(&input); err != nil {
+        return c.Status(400).JSON(fiber.Map{"message": "Input tidak valid"})
+    }
 
-	// Cari user berdasarkan email
-	var user models.User
-	if err := database.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
-		return c.Status(401).JSON(fiber.Map{
-			"error": "Invalid email or password",
-		})
-	}
+    // 2. Cari User di Database
+    var user models.User
+    // Kita preload Toko biar sekalian dapet info tokonya pas login
+    if err := database.DB.Preload("Toko").Where("email = ?", input.Email).First(&user).Error; err != nil {
+        return c.Status(401).JSON(fiber.Map{"message": "Email atau password salah"})
+    }
 
-	// Verify password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.KataSandi), []byte(input.KataSandi)); err != nil {
-		return c.Status(401).JSON(fiber.Map{
-			"error": "Invalid email or password",
-		})
-	}
+    // 3. Cek Password (Bcrypt)
+    if err := bcrypt.CompareHashAndPassword([]byte(user.KataSandi), []byte(input.KataSandi)); err != nil {
+        return c.Status(401).JSON(fiber.Map{"message": "Email atau password salah"})
+    }
 
-	// Login sukses (bisa tambahin JWT token di sini nanti)
-	user.KataSandi = "" // Jangan return password
+    // 4. Bikin Claims (Isi Token)
+    claims := jwt.MapClaims{
+        "user_id": user.ID,
+        "isAdmin": user.IsAdmin,
+        "exp":     time.Now().Add(time.Hour * 72).Unix(), // Token berlaku 72 jam
+    }
 
-	return c.JSON(fiber.Map{
-		"message": "Login successful",
-		"user":    user,
-	})
+    // 5. Bikin Token
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+    // 6. Sign Token
+    t, err := token.SignedString([]byte("rahasia_negara"))
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{"message": "Gagal generate token"})
+    }
+
+    // 7. Kirim Token ke User
+    return c.JSON(fiber.Map{
+        "message": "Login Berhasil",
+        "token":   t,
+        "user": fiber.Map{
+            "nama":    user.Nama,
+            "email":   user.Email,
+            "isAdmin": user.IsAdmin,
+            "toko":    user.Toko,
+        },
+    })
 }
 
 // GetAllUsers - Ambil semua user (Admin only, bisa ditambahin middleware nanti)

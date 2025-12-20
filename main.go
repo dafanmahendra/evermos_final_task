@@ -27,7 +27,7 @@ func main() {
 	})
 
 	// 5. Setup Routes API
-	routes.SetupRoutes(app)
+	routes.Setup(app) 
 
 	// 6. Jalanin Server di port 8080
 	app.Listen(":8080")
