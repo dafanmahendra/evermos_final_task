@@ -20,19 +20,24 @@ func ConnectDB() {
 		panic("Gagal konek ke Database!")
 	}
 
-	fmt.Println("✅ Sukses Konek ke MySQL via GORM!")
+	fmt.Println(" Sukses Konek ke MySQL via GORM!")
 
 	// Auto Migrate: GORM bakal bikin tabel users, toko, category, product, dan foto_produk otomatis
 	err = DB.AutoMigrate(
 		&models.User{},
 		&models.Toko{},
-		&models.Category{},   // <-- BARU
-		&models.Product{},    // <-- BARU
-		&models.FotoProduk{}, // <-- BARU
+		&models.Category{},
+		&models.Product{},
+		&models.FotoProduk{},
+		&models.Alamat{}, // lupa kutambahin ini
+		&models.Trx{},
+		&models.DetailTrx{},
+		&models.LogProduk{},
+		&models.FotoProduk{},
 	)
 	if err != nil {
 		fmt.Println("Gagal Migrasi Tabel:", err)
 	} else {
-		fmt.Println("✅ Sukses Migrasi Tabel User, Toko, Category, Product & Foto Produk!")
+		fmt.Println("Sukses Migrasi Tabel User, Toko, Category, Product & Foto Produk!")
 	}
 }

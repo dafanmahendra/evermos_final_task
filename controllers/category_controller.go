@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// CreateCategory - Cuma Admin yang boleh akses ini nanti
+// CreateCategory - Cuma Admin yang boleh akses ini 
 func CreateCategory(c *fiber.Ctx) error {
 	var input models.Category
 

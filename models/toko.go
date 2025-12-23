@@ -15,3 +15,4 @@ type Toko struct {
 func (Toko) TableName() string {
 	return "toko"
 }
+

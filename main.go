@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"log"
+
 	"github.com/dafanmahendra/evermos-backend/database"
 	"github.com/dafanmahendra/evermos-backend/routes"
 	"github.com/gofiber/fiber/v2"
@@ -9,26 +12,30 @@ import (
 )
 
 func main() {
-	// 1. Konek Database & Migrasi Tabel
+	// 1. Konek Database
 	database.ConnectDB()
 
-	// 2. Setup Fiber (Framework)
+	// 2. Setup Fiber
 	app := fiber.New()
 
 	// 3. Middleware
-	app.Use(logger.New()) // Log setiap request
-	app.Use(cors.New())   // Enable CORS untuk frontend
+	app.Use(logger.New())
+	app.Use(cors.New())
 
-	// 4. Test Route Sederhana
+	// --- SETUP STATIC FILES
+	fmt.Println(" MENGAKTIFKAN FOLDER GAMBAR...")
+	app.Static("/uploads", "./public/uploads")
+	// ------------------------------------------------
+
+	// 4. Test Route
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"message": "Server Evermos Ready!",
-		})
+		return c.JSON(fiber.Map{"message": "Server Ready!"})
 	})
 
 	// 5. Setup Routes API
-	routes.Setup(app) 
+	routes.Setup(app)
 
-	// 6. Jalanin Server di port 8080
-	app.Listen(":8080")
+	// 6. Jalanin Server
+	fmt.Println("SERVER SIAP DI PORT :8080")
+	log.Fatal(app.Listen(":8080"))
 }
